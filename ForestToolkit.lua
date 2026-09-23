@@ -1,12 +1,4 @@
-﻿--[[
-    🌲 FOREST TOOLKIT v3.4.1
-    Full Features | Performance Optimized | Bug-fixed
-    + Auto Wall | Auto Revive | Auto Drop | Auto Pickup
-    + Character Scale | Crosshair | Bypass CD | AFK+ | Auto SS
-    Optimized for Delta Executor
-]]
-
-
+--[[ 🌲 FOREST TOOLKIT v3.4.3 — Complete ]]
 local P,R,W,RS = game:GetService("Players"),game:GetService("RunService"),
                  game:GetService("Workspace"),game:GetService("ReplicatedStorage")
 local UIS,CG,TS,LG = game:GetService("UserInputService"),game:GetService("CoreGui"),
@@ -16,8 +8,6 @@ local TServ = game:GetService("TeleportService")
 local plr = P.LocalPlayer
 local unpack = table.unpack or unpack
 
-
--- ==================== CONFIG ====================
 local C = {
     stealth=true,spoofProps=true,blockRemotes=true,safeTP=true,
     killAura=false,killRange=150,killDelay=0.42,aimAssist=true,
@@ -43,41 +33,30 @@ local C = {
     fullbright=false,noFog=false,
     jitter=true,savedPos={},
     tpDuration=0.3,wsRampTime=0.8,breakRest=1,
-    scanInterval=0.7,
-    espInterval=0.15,
-    flingInterval=0.1,
-    remDedupe=0.15,
+    scanInterval=0.7,espInterval=0.15,flingInterval=0.1,remDedupe=0.15,
     locations={},
-    -- v3.4.1 new
     autoWall=false,wallCount=8,wallRadius=12,wallDelay=3,
     autoRevive=false,reviveRange=20,
     autoDrop=false,dropTarget=nil,dropRange=15,
     autoPickup=false,pickupRange=10,
     scaleEnabled=false,scaleValue=1,
     crosshair=false,crosshairSize=8,crosshairColor=Color3.fromRGB(0,255,100),
-    bypassCD=false,
-    antiAFKPlus=false,
+    bypassCD=false,antiAFKPlus=false,
     autoSS=false,ssInterval=60,
 }
 
-
 local S = {
-    run=true,con=nil,last={},cache={},
+    run=true,con=nil,last={},cache={},hbRunning=false,
     scan={e={},t={},f={},i={},p={},c={},big={},g={},l={},s={},fd={},fu={},r={}},
     lastScan=0,esp={},tracers={},flyBV=nil,flyBG=nil,afk=nil,afkPlus=nil,
     count={k=0,c=0,f=0,b=0,items=0,chest=0,wall=0,revive=0,drop=0,pickup=0},
     loadTime=os.clock(),breakUntil=0,breakStart=0,
     wsTarget=nil,jpTarget=nil,tpRunning=false,
     spoofWS=16,spoofJP=50,origIndex=nil,origNamecall=nil,
-    origGravity=196.2,
-    lastEsp=0,lastFling=0,
-    remLast={},
-    scanCount=0,
-    crosshairGui=nil,
+    origGravity=196.2,lastEsp=0,lastFling=0,
+    remLast={},scanCount=0,crosshairGui=nil,
 }
 
-
--- ==================== HELPERS ====================
 local function jit(x) return C.jitter and x*(1+(math.random()*2-1)*0.25) or x end
 local function chr() return plr.Character end
 local function hrp() local c=chr() return c and c:FindFirstChild("HumanoidRootPart") end
@@ -89,11 +68,8 @@ local function startBreak() S.breakUntil=os.clock()+C.breakRest end
 local function roll(p) return math.random()<p end
 local function countTbl(t) local c=0 for _ in pairs(t) do c=c+1 end return c end
 
-
--- ==================== STEALTH+ ====================
 local hasHook = hookmetamethod and checkcaller and newcclosure
 local hasConns = getconnections
-
 
 local function enableSpoof()
     if not C.stealth or not C.spoofProps or not hasHook then return end
@@ -104,7 +80,7 @@ local function enableSpoof()
         S.origNamecall = mt.__namecall
         setreadonly(mt,false)
         mt.__index = newcclosure(function(self,key)
-            if not checkcaller() and type(self)=="userdata" then
+            if (key=="WalkSpeed" or key=="JumpPower") and not checkcaller() then
                 local ok2, isHum = pcall(function() return self:IsA("Humanoid") end)
                 if ok2 and isHum then
                     if key=="WalkSpeed" then return S.spoofWS end
@@ -125,7 +101,6 @@ local function enableSpoof()
     if not ok then warn("[FT] Spoof failed") end
 end
 
-
 local function disableSpoof()
     if not S.origIndex then return end
     pcall(function()
@@ -137,7 +112,6 @@ local function disableSpoof()
     end)
     S.origIndex=nil S.origNamecall=nil
 end
-
 
 local function blockSuspicious()
     if not C.stealth or not C.blockRemotes or not hasConns then return end
@@ -159,8 +133,6 @@ local function blockSuspicious()
     end
 end
 
-
--- ==================== KEYWORDS ====================
 local K = {
     e={"deer","cult","wolf","bear","enemy","monster","raider","hunter","beast"},
     t={"tree","pine","oak","birch","log"},
@@ -188,8 +160,6 @@ local K = {
     wall={"wall","plank","fence","build","barricade"},
 }
 
-
--- ==================== SCAN ====================
 local function scan(f)
     local n=os.clock()
     if not f and n-S.lastScan<C.scanInterval then return S.scan end
@@ -200,10 +170,7 @@ local function scan(f)
     local o={e={},t={},f={},i={},p={},c={},big={},g={},l={},s={},fd={},fu={},r={}}
     local count=0
     local myChar=chr()
-
-
-    local insts=W:GetDescendants()
-    for _,v in ipairs(insts) do
+    for _,v in ipairs(W:GetDescendants()) do
         local cls=v.ClassName
         if cls=="Model" then
             if v~=myChar then
@@ -243,8 +210,6 @@ local function scan(f)
             end
         end
     end
-
-
     for _,pl in ipairs(P:GetPlayers()) do
         if pl~=plr and pl.Character then
             local r=pl.Character:FindFirstChild("HumanoidRootPart")
@@ -253,20 +218,13 @@ local function scan(f)
             end
         end
     end
-
-
     for _,x in pairs(o) do
-        if #x>1 then
-            table.sort(x,function(a,b) return a.d<b.d end)
-        end
+        if #x>1 then table.sort(x,function(a,b) return a.d<b.d end) end
     end
-    S.scan=o
-    S.scanCount=count
+    S.scan=o S.scanCount=count
     return o
 end
 
-
--- ==================== ACTIONS ====================
 local function rem(names,...)
     local key=table.concat(names,"|")
     local n=os.clock()
@@ -295,7 +253,6 @@ local function rem(names,...)
     return hit
 end
 
-
 local function prm(o)
     if not o then return false end
     for _,d in ipairs(o:GetDescendants()) do
@@ -308,19 +265,16 @@ local function prm(o)
     return false
 end
 
-
 local function atk()
     local t=tls() if t and t.Enabled and pcall(function() t:Activate() end) then return true end
     return false
 end
-
 
 local function face(p)
     local h=hrp() if not h then return end
     local d=p-h.Position
     pcall(function() h.CFrame=CFrame.lookAt(h.Position,h.Position+Vector3.new(d.X,0,d.Z)) end)
 end
-
 
 local function bring(x,h)
     local o=x.p or x.m
@@ -341,17 +295,19 @@ local function bring(x,h)
     end
 end
 
-
 local function useTool(kw)
     local bp=plr:FindFirstChildOfClass("Backpack") if not bp then return end
     for _,t in ipairs(bp:GetChildren()) do
         if t:IsA("Tool") and has(t.Name:lower(),kw) then
-            t.Parent=chr() task.wait(0.05)
-            pcall(function() t:Activate() end) return
+            t.Parent=chr()
+            task.spawn(function()
+                task.wait(0.05)
+                pcall(function() t:Activate() end)
+            end)
+            return
         end
     end
 end
-
 
 local function tpModel(x,cf)
     if not cf or not x or not x.m then return end
@@ -361,14 +317,11 @@ local function tpModel(x,cf)
     elseif obj:IsA("BasePart") then pcall(function() obj.CFrame=cf end) end
 end
 
-
--- ==================== SAFE TP ====================
 local function safeTP(cf)
     if S.tpRunning then return end
     local h=hrp() if not h then return end
     if not C.stealth or not C.safeTP or C.tpDuration<=0 then
-        pcall(function() h.CFrame=cf end)
-        return
+        pcall(function() h.CFrame=cf end) return
     end
     S.tpRunning=true
     local done=false
@@ -386,7 +339,6 @@ local function safeTP(cf)
     S.tpRunning=false
 end
 
-
 local function tp(t)
     local h=hrp() if not h then return end
     local target
@@ -400,8 +352,6 @@ local function tp(t)
     safeTP(target)
 end
 
-
--- ==================== RAMP ====================
 local function rampSpeed(target)
     local h=hum() if not h then return end
     if S.wsTarget==target then return end
@@ -419,7 +369,6 @@ local function rampSpeed(target)
         if C.stealth then S.spoofWS=C.wsEnabled and C.walkspeed or 16 end
     end)
 end
-
 
 local function rampJump(target)
     local h=hum() if not h or not h.UseJumpPower then return end
@@ -439,8 +388,6 @@ local function rampJump(target)
     end)
 end
 
-
--- ==================== ESP ====================
 local function clearESP()
     for _,g in pairs(S.esp) do
         if g.box then pcall(function() g.box:Destroy() end) end
@@ -448,7 +395,6 @@ local function clearESP()
     end
     S.esp={} S.tracers={}
 end
-
 
 local function draw(o,col,d,extra)
     if not S.esp[o] then
@@ -474,7 +420,6 @@ local function draw(o,col,d,extra)
     end
 end
 
-
 local function espLoop()
     if not (C.espPlayer or C.espEnemy or C.espItem or C.espTree or C.espChest
             or C.espGem or C.espLog or C.espScrap or C.espFood or C.espFuel or C.espRescue) then
@@ -483,8 +428,6 @@ local function espLoop()
     local n=os.clock()
     if n-S.lastEsp<C.espInterval then return end
     S.lastEsp=n
-
-
     local d=scan() local seen={}
     local function process(list,col,getHealth)
         for _,x in ipairs(list) do
@@ -521,8 +464,6 @@ local function espLoop()
     end
 end
 
-
--- ==================== FLY/NOCLIP ====================
 local function setFly(v)
     local h=hrp() if not h then return end
     if v then
@@ -538,7 +479,6 @@ local function setFly(v)
         if S.flyBG then S.flyBG:Destroy() S.flyBG=nil end
     end
 end
-
 
 local function flyStep()
     if not C.fly then return end
@@ -557,7 +497,6 @@ local function flyStep()
     S.flyBG.CFrame=cam.CFrame
 end
 
-
 local function noclipStep()
     if not C.noclip then return end
     local c=chr() if not c then return end
@@ -566,28 +505,20 @@ local function noclipStep()
     end
 end
 
-
--- ==================== ANTI-FLING ====================
 local function antiFlingStep()
     if not C.antiFling then return end
     local n=os.clock()
     if n-S.lastFling<C.flingInterval then return end
     S.lastFling=n
-
-
     local c=chr() if not c then return end
     local h=c:FindFirstChild("HumanoidRootPart")
     if not h then return end
-
-
     for _,v in ipairs(h:GetChildren()) do
         if v:IsA("BodyVelocity") or v:IsA("BodyAngularVelocity")
            or v:IsA("BodyForce") or v:IsA("BodyThrust") then
             if v~=S.flyBV then v:Destroy() end
         end
     end
-
-
     local overlap=W:GetPartBoundsInRadius(h.Position,5,OverlapParams.new())
     for _,part in ipairs(overlap) do
         local other=part:FindFirstAncestorOfClass("Model")
@@ -598,19 +529,11 @@ local function antiFlingStep()
     end
 end
 
-
--- ==================== GRAVITY ====================
 local function setGravity(v)
-    if v then
-        S.origGravity=W.Gravity
-        W.Gravity=C.gravityValue
-    else
-        W.Gravity=S.origGravity
-    end
+    if v then S.origGravity=W.Gravity W.Gravity=C.gravityValue
+    else W.Gravity=S.origGravity end
 end
 
-
--- ==================== ANTI-AFK ====================
 local function setAFK(v)
     local VU=game:GetService("VirtualUser")
     if v and not S.afk then
@@ -620,8 +543,6 @@ local function setAFK(v)
     elseif not v and S.afk then S.afk:Disconnect() S.afk=nil end
 end
 
-
--- ==================== ANTI-AFK ADVANCED ====================
 local function setAFKPlus(v)
     if v and not S.afkPlus then
         S.afkPlus=R.Heartbeat:Connect(function()
@@ -645,11 +566,6 @@ local function setAFKPlus(v)
     end
 end
 
-
--- ==================== v3.4.1 FEATURES ====================
-
-
--- 1. Auto Build Wall
 local function autoWallStep()
     if not C.autoWall then return end
     local n=os.clock()
@@ -659,22 +575,22 @@ local function autoWallStep()
     local bp=plr:FindFirstChildOfClass("Backpack") if not bp then return end
     for _,t in ipairs(bp:GetChildren()) do
         if t:IsA("Tool") and has(t.Name:lower(),K.wall) then
-            t.Parent=chr() task.wait(0.1)
-            for i=1,C.wallCount do
-                local a=(i/C.wallCount)*math.pi*2
-                local pos=h.Position+Vector3.new(math.cos(a)*C.wallRadius,0,math.sin(a)*C.wallRadius)
-                face(pos)
-                pcall(function() t:Activate() end)
-                task.wait(0.08)
-            end
+            t.Parent=chr()
             S.count.wall=S.count.wall+1
+            task.spawn(function()
+                for i=1,C.wallCount do
+                    local a=(i/C.wallCount)*math.pi*2
+                    local pos=h.Position+Vector3.new(math.cos(a)*C.wallRadius,0,math.sin(a)*C.wallRadius)
+                    face(pos)
+                    pcall(function() t:Activate() end)
+                    task.wait(0.08)
+                end
+            end)
             break
         end
     end
 end
 
-
--- 2. Auto Revive Teammate
 local function autoReviveStep()
     if not C.autoRevive then return end
     local n=os.clock()
@@ -694,8 +610,6 @@ local function autoReviveStep()
     end
 end
 
-
--- 3. Auto Drop for Teammate
 local function autoDropStep()
     if not C.autoDrop or not C.dropTarget then return end
     local n=os.clock()
@@ -711,18 +625,19 @@ local function autoDropStep()
     local bp=plr:FindFirstChildOfClass("Backpack") if not bp then return end
     for _,tool in ipairs(bp:GetChildren()) do
         if tool:IsA("Tool") then
-            pcall(function() tool.Parent=chr() end)
-            task.wait(0.05)
-            rem({"drop","toss","give","place"},tr.CFrame)
+            tool.Parent=chr()
             S.count.drop=S.count.drop+1
-            pcall(function() if tool.Parent~=bp then tool.Parent=bp end end)
+            task.spawn(function()
+                task.wait(0.05)
+                rem({"drop","toss","give","place"},tr.CFrame)
+                task.wait(0.2)
+                pcall(function() if tool.Parent~=bp then tool.Parent=bp end end)
+            end)
             break
         end
     end
 end
 
-
--- 4. Auto Pickup Nearby
 local function autoPickupStep()
     if not C.autoPickup then return end
     local n=os.clock()
@@ -738,19 +653,14 @@ local function autoPickupStep()
     end
 end
 
-
--- 5. Character Scale
 local function setScale(v)
     local c=chr() if not c then return end
     local h=c:FindFirstChildOfClass("Humanoid")
     if not h then return end
-    pcall(function() h:SetAttribute("Scale",v) end)
-    pcall(function() h:SetAttribute("BodyScale",v) end)
-    pcall(function() h:SetAttribute("BodyDepthScale",v) end)
-    pcall(function() h:SetAttribute("BodyWidthScale",v) end)
-    pcall(function() h:SetAttribute("HeadScale",v) end)
+    for _,attr in ipairs({"Scale","BodyScale","BodyDepthScale","BodyWidthScale","HeadScale"}) do
+        pcall(function() h:SetAttribute(attr,v) end)
+    end
 end
-
 
 local function scaleStep()
     if not C.scaleEnabled then return end
@@ -761,8 +671,6 @@ local function scaleStep()
     if math.abs(cur-C.scaleValue)>0.05 then setScale(C.scaleValue) end
 end
 
-
--- 7. Custom Crosshair
 local function setCrosshair(v)
     if v then
         if S.crosshairGui and S.crosshairGui.Parent then return end
@@ -797,8 +705,6 @@ local function setCrosshair(v)
     end
 end
 
-
--- 8. Bypass Tool Cooldown
 local function bypassCDStep()
     if not C.bypassCD then return end
     local t=tls() if not t then return end
@@ -809,28 +715,20 @@ local function bypassCDStep()
     end)
 end
 
-
--- 10. Auto Screenshot
 local function autoSSStep()
     if not C.autoSS then return end
     local n=os.clock()
     if n-(S.last.ss or 0)<C.ssInterval then return end
     S.last.ss=n
     pcall(function()
-        if screenshot then
-            screenshot("FT_"..os.time()..".png")
-        elseif saveScreenshot then
-            saveScreenshot("FT_"..os.time()..".png")
-        end
+        if screenshot then screenshot("FT_"..os.time()..".png")
+        elseif saveScreenshot then saveScreenshot("FT_"..os.time()..".png") end
     end)
 end
 
-
--- ==================== CHARACTER EVENTS ====================
 UIS.JumpRequest:Connect(function()
     if C.infJump then local h=hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end
 end)
-
 
 plr.CharacterAdded:Connect(function()
     task.wait(1)
@@ -841,249 +739,210 @@ plr.CharacterAdded:Connect(function()
     if C.scaleEnabled then setScale(C.scaleValue) end
 end)
 
-
--- ==================== MAIN LOOP ====================
 local function hb()
-    if not S.run then return end
-    local n,h,hm=os.clock(),hrp(),hum()
-    if not h or not hm or hm.Health<=0 then
-        if S.tpRunning then S.tpRunning=false end
-        return
-    end
-    local d=scan()
+    if not S.run or S.hbRunning then return end
+    S.hbRunning=true
+    local ok,err=pcall(function()
+        local n,h,hm=os.clock(),hrp(),hum()
+        if not h or not hm or hm.Health<=0 then
+            if S.tpRunning then S.tpRunning=false end
+            return
+        end
+        local d=scan()
 
-
-    -- KILL
-    if C.killAura and #d.e>0 and n-(S.last.k or 0)>=jit(C.killDelay) and not isResting() then
-        local t=d.e[1]
-        if t.d<=C.killRange then
-            if not (C.stealth and roll(C.killMiss)) then
-                if C.aimAssist and W.CurrentCamera then
-                    pcall(function()
-                        W.CurrentCamera.CFrame=CFrame.lookAt(W.CurrentCamera.CFrame.Position,t.r.Position)
-                    end)
+        if C.killAura and #d.e>0 and n-(S.last.k or 0)>=jit(C.killDelay) and not isResting() then
+            local t=d.e[1]
+            if t.d<=C.killRange then
+                if not (C.stealth and roll(C.killMiss)) then
+                    if C.aimAssist and W.CurrentCamera then
+                        pcall(function()
+                            W.CurrentCamera.CFrame=CFrame.lookAt(W.CurrentCamera.CFrame.Position,t.r.Position)
+                        end)
+                    end
+                    face(t.r.Position)
+                    if not atk() then rem(K.atk,t.m) end
+                    S.count.k=S.count.k+1
                 end
-                face(t.r.Position)
-                if not atk() then rem(K.atk,t.m) end
-                S.count.k=S.count.k+1
-            end
-            S.last.k=n
-            if C.stealth and (n-S.breakStart)>C.killBreak then
-                S.breakStart=n startBreak()
+                S.last.k=n
+                if C.stealth and (n-S.breakStart)>C.killBreak then
+                    S.breakStart=n startBreak()
+                end
             end
         end
-    end
 
-
-    -- CHOP
-    if C.chopAura and n-(S.last.c or 0)>=jit(C.chopDelay) and not isResting() then
-        local t=(C.chopBig and #d.big>0) and d.big[1] or (#d.t>0 and d.t[1] or nil)
-        if t and t.d<=C.chopRange then
-            if not (C.stealth and roll(C.chopMiss)) then
-                face(t.r.Position)
-                if not atk() then prm(t.m) end
-                S.count.c=S.count.c+1
-            end
-            S.last.c=n
-            if C.stealth and (n-S.breakStart)>C.chopBreak then
-                S.breakStart=n startBreak()
+        if C.chopAura and n-(S.last.c or 0)>=jit(C.chopDelay) and not isResting() then
+            local t=(C.chopBig and #d.big>0) and d.big[1] or (#d.t>0 and d.t[1] or nil)
+            if t and t.d<=C.chopRange then
+                if not (C.stealth and roll(C.chopMiss)) then
+                    face(t.r.Position)
+                    if not atk() then prm(t.m) end
+                    S.count.c=S.count.c+1
+                end
+                S.last.c=n
+                if C.stealth and (n-S.breakStart)>C.chopBreak then
+                    S.breakStart=n startBreak()
+                end
             end
         end
-    end
 
-
-    -- STUN
-    if C.stun and #d.e>0 and n-(S.last.st or 0)>=jit(1.2) then
-        local t=d.e[1]
-        if t.d<=C.stunRange then face(t.r.Position) atk() S.last.st=n end
-    end
-
-
-    -- ENTITY GOD
-    if C.entityGod then
-        for _,x in ipairs(d.e) do
-            local hh=x.m:FindFirstChildOfClass("Humanoid")
-            if hh then pcall(function() hh.Health=hh.MaxHealth end) end
+        if C.stun and #d.e>0 and n-(S.last.st or 0)>=jit(1.2) then
+            local t=d.e[1]
+            if t.d<=C.stunRange then face(t.r.Position) atk() S.last.st=n end
         end
-    end
 
-
-    -- FIRE
-    if C.autoFire and #d.f>0 and n-(S.last.f or 0)>=jit(C.fireDelay) then
-        local t=d.f[1]
-        if t.d<=C.fireRange then
-            if not prm(t.m) then rem(K.fuelAdd,t.m) end
-            S.last.f=n S.count.f=S.count.f+1
-        end
-    end
-
-
-    -- COOK
-    if C.autoCook and #d.f>0 and n-(S.last.cook or 0)>=jit(2.5) then
-        for _,f in ipairs(d.f) do
-            if f.d<=30 then useTool(K.eat) break end
-        end
-        S.last.cook=n
-    end
-
-
-    -- BRING
-    if C.bringItem and #d.i>0 and n-(S.last.b or 0)>=jit(C.bringDelay) and not isResting() then
-        if C.bringAll then
-            local cnt=0
-            for _,x in ipairs(d.i) do
-                if x.d<=C.bringRange then bring(x,h) cnt=cnt+1 if cnt>=5 then break end end
+        if C.entityGod then
+            for _,x in ipairs(d.e) do
+                local hh=x.m:FindFirstChildOfClass("Humanoid")
+                if hh then pcall(function() hh.Health=hh.MaxHealth end) end
             end
-            S.count.items=S.count.items+cnt
-        else
-            for _,x in ipairs(d.i) do
-                if x.d<=C.bringRange then
-                    if C.bringFilter=="all" or x.p.Name:lower():find(C.bringFilter) then
-                        bring(x,h) S.count.b=S.count.b+1 break
+        end
+
+        if C.autoFire and #d.f>0 and n-(S.last.f or 0)>=jit(C.fireDelay) then
+            local t=d.f[1]
+            if t.d<=C.fireRange then
+                if not prm(t.m) then rem(K.fuelAdd,t.m) end
+                S.last.f=n S.count.f=S.count.f+1
+            end
+        end
+
+        if C.autoCook and #d.f>0 and n-(S.last.cook or 0)>=jit(2.5) then
+            for _,f in ipairs(d.f) do
+                if f.d<=30 then useTool(K.eat) break end
+            end
+            S.last.cook=n
+        end
+
+        if C.bringItem and #d.i>0 and n-(S.last.b or 0)>=jit(C.bringDelay) and not isResting() then
+            if C.bringAll then
+                local cnt=0
+                for _,x in ipairs(d.i) do
+                    if x.d<=C.bringRange then bring(x,h) cnt=cnt+1 if cnt>=5 then break end end
+                end
+                S.count.items=S.count.items+cnt
+            else
+                for _,x in ipairs(d.i) do
+                    if x.d<=C.bringRange then
+                        if C.bringFilter=="all" or x.p.Name:lower():find(C.bringFilter) then
+                            bring(x,h) S.count.b=S.count.b+1 break
+                        end
                     end
                 end
             end
+            S.last.b=n
         end
-        S.last.b=n
-    end
 
-
-    -- AUTO CHEST
-    if C.autoOpenChest and #d.c>0 and n-(S.last.chest or 0)>=jit(0.5) then
-        for _,x in ipairs(d.c) do
-            if x.d<=C.chestRange then
-                if x.p then prm(x.p) else prm(x.m) end
-                S.count.chest=S.count.chest+1
-            end
-        end
-        S.last.chest=n
-    end
-
-
-    -- AUTO COLLECT
-    if C.autoCollect and n-(S.last.pick or 0)>=jit(0.4) then
-        for _,x in ipairs(d.i) do
-            if x.d<=C.bringRange then
-                local nm=x.p.Name:lower()
-                if (C.collectFlowers and has(nm,K.flower)) or (C.collectGold and has(nm,K.gold)) then
-                    prm(x.p)
+        if C.autoOpenChest and #d.c>0 and n-(S.last.chest or 0)>=jit(0.5) then
+            for _,x in ipairs(d.c) do
+                if x.d<=C.chestRange then
+                    if x.p then prm(x.p) else prm(x.m) end
+                    S.count.chest=S.count.chest+1
                 end
             end
+            S.last.chest=n
         end
-        S.last.pick=n
-    end
 
-
-    -- EAT
-    if C.autoEat and n-(S.last.eat or 0)>=jit(2) then
-        local hunger=100
-        for _,obj in ipairs({hm,chr(),plr}) do
-            if obj then
-                local v=obj:GetAttribute("Hunger") or obj:GetAttribute("Food") or obj:GetAttribute("Thirst")
-                if v then hunger=v break end
+        if C.autoCollect and n-(S.last.pick or 0)>=jit(0.4) then
+            for _,x in ipairs(d.i) do
+                if x.d<=C.bringRange then
+                    local nm=x.p.Name:lower()
+                    if (C.collectFlowers and has(nm,K.flower)) or (C.collectGold and has(nm,K.gold)) then
+                        prm(x.p)
+                    end
+                end
             end
+            S.last.pick=n
         end
-        if hunger<C.eatThreshold then useTool(K.eat) end
-        S.last.eat=n
-    end
 
-
-    -- HEAL
-    if C.autoHeal and hm.Health<C.healThreshold and n-(S.last.heal or 0)>=jit(2.5) then
-        useTool(K.heal) rem(K.heal) S.last.heal=n
-    end
-
-
-    -- RESCUE
-    if C.autoRescue and n-(S.last.resc or 0)>=jit(3.5) then
-        for _,x in ipairs(d.r) do
-            if x.d<=200 then
-                if x.p then prm(x.p) else prm(x.m) end
+        if C.autoEat and n-(S.last.eat or 0)>=jit(2) then
+            local hunger=100
+            for _,obj in ipairs({hm,chr(),plr}) do
+                if obj then
+                    local v=obj:GetAttribute("Hunger") or obj:GetAttribute("Food") or obj:GetAttribute("Thirst")
+                    if v then hunger=v break end
+                end
             end
+            if hunger<C.eatThreshold then useTool(K.eat) end
+            S.last.eat=n
         end
-        for _,x in ipairs(d.i) do
-            local nm=x.p.Name:lower()
-            if x.d<=200 and (has(nm,K.rescueAct) or nm:find("child") or nm:find("kid")) then
-                prm(x.p) break
+
+        if C.autoHeal and hm.Health<C.healThreshold and n-(S.last.heal or 0)>=jit(2.5) then
+            useTool(K.heal) rem(K.heal) S.last.heal=n
+        end
+
+        if C.autoRescue and n-(S.last.resc or 0)>=jit(3.5) then
+            for _,x in ipairs(d.r) do
+                if x.d<=200 then
+                    if x.p then prm(x.p) else prm(x.m) end
+                end
             end
-        end
-        rem(K.rescueAct) S.last.resc=n
-    end
-
-
-    -- PLANT/SCRAP/COMPRESS/CRAFT
-    if C.autoPlant and n-(S.last.plant or 0)>=jit(2.5) then
-        for i=1,C.plantCount do
-            local a=(i/C.plantCount)*math.pi*2
-            local pos=h.Position+Vector3.new(math.cos(a)*15,0,math.sin(a)*15)
-            rem(K.plant,CFrame.new(pos))
-        end
-        S.last.plant=n
-    end
-    if C.autoScrap then rem(K.scrapAct) end
-    if C.autoCompress then rem(K.comp) end
-    if C.autoCraft then rem(K.craft) end
-
-
-    -- v3.4.1 FEATURES
-    autoWallStep()
-    autoReviveStep()
-    autoDropStep()
-    autoPickupStep()
-    scaleStep()
-    bypassCDStep()
-    autoSSStep()
-
-
-    -- SPEED
-    if C.wsEnabled then
-        local target=C.stealth and math.min(C.walkspeed,50) or C.walkspeed
-        if math.abs(hm.WalkSpeed-target)>0.5 then rampSpeed(target) end
-    end
-    if C.jpEnabled and hm.UseJumpPower then
-        local target=C.stealth and math.min(C.jumppower,120) or C.jumppower
-        if math.abs(hm.JumpPower-target)>0.5 then rampJump(target) end
-    end
-
-
-    -- GOD/STAMINA
-    if C.godMode and hm.Health<hm.MaxHealth then pcall(function() hm.Health=hm.MaxHealth end) end
-    if C.infStamina then
-        pcall(function()
-            for _,a in ipairs({"Stamina","Energy","Hunger","Thirst"}) do
-                if hm:GetAttribute(a) then hm:SetAttribute(a,100) end
+            for _,x in ipairs(d.i) do
+                local nm=x.p.Name:lower()
+                if x.d<=200 and (has(nm,K.rescueAct) or nm:find("child") or nm:find("kid")) then
+                    prm(x.p) break
+                end
             end
-        end)
-    end
-    flyStep() noclipStep() antiFlingStep() espLoop()
+            rem(K.rescueAct) S.last.resc=n
+        end
 
+        if C.autoPlant and n-(S.last.plant or 0)>=jit(2.5) then
+            for i=1,C.plantCount do
+                local a=(i/C.plantCount)*math.pi*2
+                local pos=h.Position+Vector3.new(math.cos(a)*15,0,math.sin(a)*15)
+                rem(K.plant,CFrame.new(pos))
+            end
+            S.last.plant=n
+        end
+        if C.autoScrap then rem(K.scrapAct) end
+        if C.autoCompress then rem(K.comp) end
+        if C.autoCraft then rem(K.craft) end
 
-    if C.fullbright then
-        LG.Brightness=3 LG.ClockTime=14 LG.Ambient=Color3.fromRGB(200,200,200)
-    end
-    if C.noFog then LG.FogEnd=1e6 LG.FogStart=1e6 end
+        autoWallStep() autoReviveStep() autoDropStep() autoPickupStep()
+        scaleStep() bypassCDStep() autoSSStep()
+
+        if C.wsEnabled then
+            local target=C.stealth and math.min(C.walkspeed,50) or C.walkspeed
+            if math.abs(hm.WalkSpeed-target)>0.5 then rampSpeed(target) end
+        end
+        if C.jpEnabled and hm.UseJumpPower then
+            local target=C.stealth and math.min(C.jumppower,120) or C.jumppower
+            if math.abs(hm.JumpPower-target)>0.5 then rampJump(target) end
+        end
+
+        if C.godMode and hm.Health<hm.MaxHealth then pcall(function() hm.Health=hm.MaxHealth end) end
+        if C.infStamina then
+            pcall(function()
+                for _,a in ipairs({"Stamina","Energy","Hunger","Thirst"}) do
+                    if hm:GetAttribute(a) then hm:SetAttribute(a,100) end
+                end
+            end)
+        end
+        flyStep() noclipStep() antiFlingStep() espLoop()
+
+        if C.fullbright then
+            LG.Brightness=3 LG.ClockTime=14 LG.Ambient=Color3.fromRGB(200,200,200)
+        end
+        if C.noFog then LG.FogEnd=1e6 LG.FogStart=1e6 end
+    end)
+    S.hbRunning=false
+    if not ok then warn("[FT hb]",tostring(err)) end
 end
 
-
--- ==================== UI ====================
 local function ui()
     local g=Instance.new("ScreenGui")
     g.Name="FT_"..tick() g.ResetOnSpawn=false g.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
     pcall(function() g.Parent=CG end) if not g.Parent then g.Parent=plr:WaitForChild("PlayerGui") end
-
 
     local m=Instance.new("Frame",g)
     m.Size=UDim2.new(0,640,0,440) m.Position=UDim2.new(.5,-320,.5,-220)
     m.BackgroundColor3=Color3.fromRGB(22,24,30) m.BorderSizePixel=0 m.Active=true m.Draggable=true
     Instance.new("UICorner",m).CornerRadius=UDim.new(0,10)
 
-
     local tb=Instance.new("Frame",m)
     tb.Size=UDim2.new(1,0,0,32) tb.BackgroundColor3=Color3.fromRGB(32,34,42) tb.BorderSizePixel=0
     Instance.new("UICorner",tb).CornerRadius=UDim.new(0,10)
     local tl=Instance.new("TextLabel",tb)
     tl.Size=UDim2.new(1,-40,1,0) tl.Position=UDim2.new(0,12,0,0)
-    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.4.1"
+    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.4.3"
     tl.TextColor3=Color3.fromRGB(200,240,210) tl.Font=Enum.Font.GothamBold tl.TextSize=13
     tl.TextXAlignment=Enum.TextXAlignment.Left
     local cl=Instance.new("TextButton",tb)
@@ -1092,7 +951,6 @@ local function ui()
     cl.Font=Enum.Font.GothamBold cl.TextSize=16
     cl.MouseButton1Click:Connect(function() g:Destroy() end)
 
-
     local tabs={"Combat","Items","Bring","Survival","TP","Visuals","Misc"}
     local tbar=Instance.new("Frame",m)
     tbar.Size=UDim2.new(0,110,1,-32) tbar.Position=UDim2.new(0,0,0,32)
@@ -1100,7 +958,6 @@ local function ui()
     local ct=Instance.new("Frame",m)
     ct.Size=UDim2.new(1,-110,1,-32) ct.Position=UDim2.new(0,110,0,32)
     ct.BackgroundColor3=Color3.fromRGB(22,24,30) ct.BorderSizePixel=0
-
 
     local pages={}
     for i,nm in ipairs(tabs) do
@@ -1123,15 +980,11 @@ local function ui()
         end)
     end
 
-
     local pageY={}
     for _,nm in ipairs(tabs) do pageY[nm]=0 end
     local function nextY(pg,h)
-        local y=pageY[pg]
-        pageY[pg]=y+h
-        return y
+        local y=pageY[pg] pageY[pg]=y+h return y
     end
-
 
     local function tog(pg,lb,key,cb)
         local r=Instance.new("Frame",pages[pg])
@@ -1154,7 +1007,6 @@ local function ui()
             if cb then cb(C[key]) end
         end)
     end
-
 
     local function sld(pg,lb,key,mn,mx)
         local r=Instance.new("Frame",pages[pg])
@@ -1190,7 +1042,6 @@ local function ui()
         end)
     end
 
-
     local function btn(pg,lb,cb)
         local b=Instance.new("TextButton",pages[pg])
         b.Size=UDim2.new(1,-16,0,28) b.Position=UDim2.new(0,8,0,nextY(pg,30))
@@ -1201,7 +1052,6 @@ local function ui()
         b.MouseButton1Click:Connect(cb)
     end
 
-
     local function sec(pg,lb)
         local l=Instance.new("TextLabel",pages[pg])
         l.Size=UDim2.new(1,-16,0,22) l.Position=UDim2.new(0,8,0,nextY(pg,24))
@@ -1209,8 +1059,6 @@ local function ui()
         l.TextColor3=Color3.fromRGB(120,220,150) l.Font=Enum.Font.GothamBold l.TextSize=11
     end
 
-
-    -- COMBAT
     sec("Combat","🛡 STEALTH")
     tog("Combat","Stealth Mode","stealth")
     tog("Combat","Spoof Props","spoofProps")
@@ -1237,8 +1085,6 @@ local function ui()
     tog("Combat","Entity Godmode","entityGod")
     tog("Combat","Anti-Fling","antiFling")
 
-
-    -- ITEMS
     sec("Items","AUTO FARM")
     tog("Items","Auto Collect","autoCollect")
     tog("Items","  ↳ Flowers","collectFlowers")
@@ -1258,8 +1104,6 @@ local function ui()
     sld("Items","Pickup Range","pickupRange",5,50)
     tog("Items","Bypass Tool Cooldown","bypassCD")
 
-
-    -- BRING
     sec("Bring","SETTINGS")
     tog("Bring","Enable Bring","bringItem")
     sld("Bring","Range","bringRange",10,300)
@@ -1344,8 +1188,6 @@ local function ui()
         end
     end)
 
-
-    -- SURVIVAL
     sec("Survival","PROTECT")
     tog("Survival","God Mode","godMode")
     tog("Survival","Inf Stamina","infStamina")
@@ -1377,8 +1219,6 @@ local function ui()
     tog("Survival","Gravity Mod","gravityMod",setGravity)
     sld("Survival","Gravity Value","gravityValue",10,300)
 
-
-    -- TP
     sec("TP","QUICK")
     btn("TP","→ Nearest Big Tree",function() local d=scan() if #d.big>0 then tp(d.big[1]) end end)
     btn("TP","→ Nearest Tree",function() local d=scan() if #d.t>0 then tp(d.t[1]) end end)
@@ -1407,8 +1247,6 @@ local function ui()
         end
     end)
 
-
-    -- VISUALS
     sec("Visuals","ESP ENTITIES")
     tog("Visuals","ESP Enemy","espEnemy")
     tog("Visuals","ESP Player","espPlayer")
@@ -1436,8 +1274,6 @@ local function ui()
     tog("Visuals","Full Bright","fullbright")
     tog("Visuals","No Fog","noFog")
 
-
-    -- MISC
     sec("Misc","CHARACTER")
     btn("Misc","Reset Character",function()
         local h=hum() if h then h.Health=0 end
@@ -1497,36 +1333,38 @@ local function ui()
     end)
     btn("Misc","Reset Stats",function() for k in pairs(S.count) do S.count[k]=0 end end)
 
-
     return g
 end
 
-
--- ==================== START ====================
-if C.stealth then
-    enableSpoof()
-    task.delay(2,blockSuspicious)
-end
-
-
-S.con=R.Heartbeat:Connect(hb)
 local gui=ui()
+S.con=R.Heartbeat:Connect(hb)
 
+if C.stealth then
+    task.delay(3,function()
+        pcall(enableSpoof)
+        pcall(blockSuspicious)
+    end)
+end
 
 _G.FT={
     cfg=C,state=S,ui=gui,
     scan=function() return scan(true) end,
     tp=tp,esp=clearESP,
-    start=function() S.run=true end,
-    stop=function() S.run=false if S.con then S.con:Disconnect() S.con=nil end end,
+    start=function()
+        S.run=true
+        if not S.con then S.con=R.Heartbeat:Connect(hb) end
+    end,
+    stop=function()
+        S.run=false
+        if S.con then S.con:Disconnect() S.con=nil end
+    end,
     spoof=enableSpoof,unspoof=disableSpoof,
     block=blockSuspicious,
     crosshair=setCrosshair,
     scale=setScale,
 }
 
-
 print("═══════════════════════════════════════════")
-print("🌲 FOREST TOOLKIT v3.4.1")
-print("   7 tabs | 128+ options | 9 new features")
+print("🌲 FOREST TOOLKIT v3.4.3 — Loaded")
+print("   UI ready | Stealth sau 3s | No lag")
 print("═══════════════════════════════════════════")
