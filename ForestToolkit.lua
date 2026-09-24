@@ -1,8 +1,4 @@
---[[
-    🌲 FOREST TOOLKIT v3.5 — Full Edition
-    Auto Camp | Bring Filter | Transparency | Mobile Optimized
-]]
-
+--[[ 🌲 FOREST TOOLKIT v3.6 — Bring Fixed Edition ]]
 local P,R,W,RS = game:GetService("Players"),game:GetService("RunService"),
                  game:GetService("Workspace"),game:GetService("ReplicatedStorage")
 local UIS,CG,TS,LG = game:GetService("UserInputService"),game:GetService("CoreGui"),
@@ -13,23 +9,18 @@ local plr = P.LocalPlayer
 local unpack = table.unpack or unpack
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
--- ==================== CONFIG ====================
 local C = {
-    -- CAMP (new)
     autoCamp=false,campRange=150,campStand=true,campStandDist=6,campAutoTpFire=false,
     campFeed=true,campFeedInterval=2,
     campBringWood=true,campBringFuel=true,campBringScrap=false,
     campBringFood=false,campBringGem=false,campBringSapling=false,
     campBringFlower=false,campBringAll=false,
-    -- STEALTH
     stealth=not isMobile,spoofProps=not isMobile,blockRemotes=not isMobile,safeTP=true,
-    -- COMBAT
     killAura=false,killRange=150,killDelay=0.42,aimAssist=true,
     killMiss=0.08,killBreak=45,
     chopAura=false,chopRange=150,chopDelay=0.36,chopBig=true,
     chopMiss=0.05,chopBreak=60,
     stun=false,stunRange=30,entityGod=false,antiFling=false,
-    -- ITEMS
     bringItem=false,bringRange=120,bringDelay=0.7,bringAll=false,bringFilter="all",
     bringSpeed=35,
     autoFire=false,fireRange=100,fireDelay=2,
@@ -37,19 +28,16 @@ local C = {
     autoScrap=false,autoCompress=false,autoCraft=false,
     autoCollect=false,collectFlowers=true,collectGold=true,
     autoOpenChest=false,chestRange=50,
-    -- SURVIVAL
     godMode=false,infStamina=false,
     autoEat=false,eatThreshold=40,autoHeal=false,healThreshold=40,autoRescue=false,
     fly=false,flySpeed=50,noclip=false,infJump=false,
     wsEnabled=false,walkspeed=50,jpEnabled=false,jumppower=120,antiAFK=false,
     gravityMod=false,gravityValue=100,
-    -- VISUALS
     espEnemy=false,espTree=false,espItem=false,espPlayer=false,espChest=false,
     espGem=false,espLog=false,espScrap=false,espFood=false,espFuel=false,espRescue=false,
     espName=false,espHealth=false,espDist=true,
     espFill=0.6,espSize=13,
     fullbright=false,noFog=false,
-    -- MISC
     jitter=true,savedPos={},
     tpDuration=0.3,wsRampTime=0.8,breakRest=1,
     scanInterval=isMobile and 1.0 or 0.7,
@@ -64,11 +52,9 @@ local C = {
     crosshair=false,crosshairSize=8,crosshairColor=Color3.fromRGB(0,255,100),
     bypassCD=false,antiAFKPlus=false,
     autoSS=false,ssInterval=60,
-    -- UI
     uiTransparency=0.3,
 }
 
--- ==================== STATE ====================
 local S = {
     run=true,con=nil,last={},cache={},hbRunning=false,
     scan={e={},t={},f={},i={},p={},c={},big={},g={},l={},s={},fd={},fu={},r={}},
@@ -81,7 +67,6 @@ local S = {
     remLast={},scanCount=0,crosshairGui=nil,
 }
 
--- ==================== HELPERS ====================
 local function jit(x) return C.jitter and x*(1+(math.random()*2-1)*0.25) or x end
 local function chr() return plr.Character end
 local function hrp() local c=chr() return c and c:FindFirstChild("HumanoidRootPart") end
@@ -93,7 +78,6 @@ local function startBreak() S.breakUntil=os.clock()+C.breakRest end
 local function roll(p) return math.random()<p end
 local function countTbl(t) local c=0 for _ in pairs(t) do c=c+1 end return c end
 
--- ==================== STEALTH+ ====================
 local hasHook = hookmetamethod and checkcaller and newcclosure
 local hasConns = getconnections
 
@@ -159,7 +143,7 @@ local function blockSuspicious()
     end
 end
 
--- ==================== KEYWORDS ====================
+-- ============ KEYWORDS (PATCH 1) ============
 local K = {
     e={"deer","cult","wolf","bear","enemy","monster","raider","hunter","beast"},
     t={"tree","pine","oak","birch","log"},
@@ -176,7 +160,8 @@ local K = {
     flower={"flower","rose","tulip","daisy"},
     gold={"gold","coin","money"},
     rescue={"child","kid","victim","survivor","npc_rescue"},
-    pick={"pickup","take","collect","loot","grab","interact","harvest","get"},
+    pick={"pickup","take","collect","loot","grab","interact","harvest","get",
+          "pickupitem","grabitem","requestitem","collectitem"},
     atk={"attack","hit","damage","swing","melee","combat","stun"},
     fuelAdd={"addwood","feedfire","addfuel","wood","fuel","refuel"},
     plant={"plant","sapling","grow","seed","place"},
@@ -187,7 +172,7 @@ local K = {
     wall={"wall","plank","fence","build","barricade"},
 }
 
--- ==================== SCAN ====================
+-- ============ SCAN (PATCH 3 - bắt prompt ở parent) ============
 local function scan(f)
     local n=os.clock()
     if not f and n-S.lastScan<C.scanInterval then return S.scan end
@@ -232,7 +217,9 @@ local function scan(f)
                 elseif has(nm,K.fuel) and not has(nm,K.f) then o.fu[#o.fu+1]={p=v,d=d}
                 elseif has(nm,K.food) then o.fd[#o.fd+1]={p=v,d=d}
                 elseif has(nm,K.rescue) then o.r[#o.r+1]={p=v,d=d}
-                elseif v:FindFirstChildOfClass("ProximityPrompt") or has(nm,K.i) then
+                elseif v:FindFirstChildOfClass("ProximityPrompt")
+                    or (v.Parent and v.Parent:FindFirstChildOfClass("ProximityPrompt"))
+                    or has(nm,K.i) then
                     o.i[#o.i+1]={p=v,d=d}
                 end
             end
@@ -254,7 +241,6 @@ local function scan(f)
     return o
 end
 
--- ==================== REMOTE ====================
 local function rem(names,...)
     local key=table.concat(names,"|")
     local n=os.clock()
@@ -283,7 +269,6 @@ local function rem(names,...)
     return hit
 end
 
--- ==================== PROMPT / ATTACK ====================
 local function prm(o)
     if not o then return false end
     for _,d in ipairs(o:GetDescendants()) do
@@ -307,23 +292,52 @@ local function face(p)
     pcall(function() h.CFrame=CFrame.lookAt(h.Position,h.Position+Vector3.new(d.X,0,d.Z)) end)
 end
 
--- ==================== BRING ====================
+-- ============ BRING (PATCH 2 + unanchor Model) ============
 local function bring(x,h)
-    local o=x.p or x.m
-    if not o or not o.Parent then return end
-    if o:IsA("BasePart") then
-        if prm(o) then return end
-        if o.Parent~=W and prm(o.Parent) then return end
-        if rem(K.pick,o) then return end
-        if o.Parent~=W then rem(K.pick,o.Parent) end
-        if o.Anchored then return end
-        pcall(function() o:SetNetworkOwner(plr) end)
+    if not x or not h then return end
+    local target = x.p or (x.m and x.m:FindFirstChildWhichIsA("BasePart"))
+    if not target or not target.Parent then return end
+
+    -- 1. Prompt trên part HOẶC parent
+    local promptObj = target:FindFirstChildOfClass("ProximityPrompt")
+                   or (target.Parent and target.Parent:FindFirstChildOfClass("ProximityPrompt"))
+    if promptObj and promptObj.Enabled then
+        if fireproximityprompt then
+            pcall(fireproximityprompt, promptObj, promptObj.HoldDuration or 0)
+            return
+        end
         pcall(function()
-            local d=h.Position-o.Position
-            if d.Magnitude>1 then o.AssemblyLinearVelocity=d.Unit*C.bringSpeed end
+            promptObj:InputHoldBegin()
+            task.wait(math.min(promptObj.HoldDuration or 0, 0.15))
+            promptObj:InputHoldEnd()
         end)
-    elseif o:IsA("Model") then
-        pcall(function() o:PivotTo(h.CFrame*CFrame.new(0,0,-3)) end)
+        return
+    end
+
+    -- 2. Remote dự phòng
+    if rem(K.pick, target) then return end
+    if x.m and rem(K.pick, x.m) then return end
+
+    -- 3. Kéo physics (BasePart)
+    if target:IsA("BasePart") then
+        pcall(function() target:SetNetworkOwner(plr) end)
+        pcall(function()
+            local d = h.Position - target.Position
+            if d.Magnitude > 1 then
+                target.AssemblyLinearVelocity = d.Unit * C.bringSpeed
+            end
+        end)
+    -- 4. Model → unanchor + PivotTo (PATCH bổ sung)
+    elseif x.m and x.m:IsA("Model") then
+        pcall(function()
+            for _,p in ipairs(x.m:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    pcall(function() p.Anchored = false end)
+                    pcall(function() p:SetNetworkOwner(plr) end)
+                end
+            end
+            x.m:PivotTo(h.CFrame * CFrame.new(0,0,-3))
+        end)
     end
 end
 
@@ -349,7 +363,6 @@ local function tpModel(x,cf)
     elseif obj:IsA("BasePart") then pcall(function() obj.CFrame=cf end) end
 end
 
--- ==================== SAFE TP ====================
 local function safeTP(cf)
     if S.tpRunning then return end
     local h=hrp() if not h then return end
@@ -385,7 +398,6 @@ local function tp(t)
     safeTP(target)
 end
 
--- ==================== RAMP ====================
 local function rampSpeed(target)
     local h=hum() if not h then return end
     if S.wsTarget==target then return end
@@ -422,7 +434,6 @@ local function rampJump(target)
     end)
 end
 
--- ==================== ESP ====================
 local function clearESP()
     for _,g in pairs(S.esp) do
         if g.box then pcall(function() g.box:Destroy() end) end
@@ -499,7 +510,6 @@ local function espLoop()
     end
 end
 
--- ==================== FLY / NOCLIP ====================
 local function setFly(v)
     local h=hrp() if not h then return end
     if v then
@@ -541,7 +551,6 @@ local function noclipStep()
     end
 end
 
--- ==================== ANTI-FLING ====================
 local function antiFlingStep()
     if not C.antiFling then return end
     local n=os.clock()
@@ -566,13 +575,11 @@ local function antiFlingStep()
     end
 end
 
--- ==================== GRAVITY ====================
 local function setGravity(v)
     if v then S.origGravity=W.Gravity W.Gravity=C.gravityValue
     else W.Gravity=S.origGravity end
 end
 
--- ==================== ANTI-AFK ====================
 local function setAFK(v)
     local VU=game:GetService("VirtualUser")
     if v and not S.afk then
@@ -605,23 +612,17 @@ local function setAFKPlus(v)
     end
 end
 
--- ==================== AUTO CAMP ====================
 local function autoCampStep()
     if not C.autoCamp then return end
     local n=os.clock()
     if n-(S.last.camp or 0)<0.5 then return end
     S.last.camp=n
-
     local h=hrp() if not h then return end
     local d=scan()
-
-    -- 1. Tìm campfire gần nhất
     local fire = d.f[1]
     if not fire then return end
     local fireR = fire.r
     if not fireR or not fireR.Parent then return end
-
-    -- 2. Đứng gần lửa
     if C.campStand then
         local firePos = fireR.Position
         local dist = (h.Position - firePos).Magnitude
@@ -635,8 +636,6 @@ local function autoCampStep()
             end
         end
     end
-
-    -- 3. Thu thập danh sách item cần bring
     local bringList = {}
     if C.campBringAll then
         for _,x in ipairs(d.i) do table.insert(bringList, x) end
@@ -662,8 +661,6 @@ local function autoCampStep()
             end
         end
     end
-
-    -- 4. Bring (tối đa 10 mỗi lần)
     local cnt = 0
     for _,x in ipairs(bringList) do
         if x.d and x.d <= C.campRange then
@@ -673,8 +670,6 @@ local function autoCampStep()
         end
     end
     if cnt > 0 then S.count.camp = S.count.camp + cnt end
-
-    -- 5. Cho fuel vào lửa
     if C.campFeed and n-(S.last.feed or 0) >= C.campFeedInterval then
         S.last.feed = n
         if not prm(fire.m) then
@@ -684,7 +679,6 @@ local function autoCampStep()
     end
 end
 
--- ==================== OTHER AUTOMATION ====================
 local function autoWallStep()
     if not C.autoWall then return end
     local n=os.clock()
@@ -845,7 +839,6 @@ local function autoSSStep()
     end)
 end
 
--- ==================== CHARACTER EVENTS ====================
 UIS.JumpRequest:Connect(function()
     if C.infJump then local h=hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end
 end)
@@ -859,7 +852,6 @@ plr.CharacterAdded:Connect(function()
     if C.scaleEnabled then setScale(C.scaleValue) end
 end)
 
--- ==================== MAIN LOOP ====================
 local function hb()
     if not S.run or S.hbRunning then return end
     S.hbRunning=true
@@ -871,10 +863,8 @@ local function hb()
         end
         local d=scan()
 
-        -- AUTO CAMP
         autoCampStep()
 
-        -- KILL AURA
         if C.killAura and #d.e>0 and n-(S.last.k or 0)>=jit(C.killDelay) and not isResting() then
             local t=d.e[1]
             if t.d<=C.killRange then
@@ -895,7 +885,6 @@ local function hb()
             end
         end
 
-        -- CHOP AURA
         if C.chopAura and n-(S.last.c or 0)>=jit(C.chopDelay) and not isResting() then
             local t=(C.chopBig and #d.big>0) and d.big[1] or (#d.t>0 and d.t[1] or nil)
             if t and t.d<=C.chopRange then
@@ -911,13 +900,11 @@ local function hb()
             end
         end
 
-        -- STUN
         if C.stun and #d.e>0 and n-(S.last.st or 0)>=jit(1.2) then
             local t=d.e[1]
             if t.d<=C.stunRange then face(t.r.Position) atk() S.last.st=n end
         end
 
-        -- ENTITY GOD
         if C.entityGod then
             for _,x in ipairs(d.e) do
                 local hh=x.m:FindFirstChildOfClass("Humanoid")
@@ -925,7 +912,6 @@ local function hb()
             end
         end
 
-        -- AUTO FIRE
         if C.autoFire and #d.f>0 and n-(S.last.f or 0)>=jit(C.fireDelay) then
             local t=d.f[1]
             if t.d<=C.fireRange then
@@ -934,7 +920,6 @@ local function hb()
             end
         end
 
-        -- AUTO COOK
         if C.autoCook and #d.f>0 and n-(S.last.cook or 0)>=jit(2.5) then
             for _,f in ipairs(d.f) do
                 if f.d<=30 then useTool(K.eat) break end
@@ -942,7 +927,6 @@ local function hb()
             S.last.cook=n
         end
 
-        -- BRING
         if C.bringItem and #d.i>0 and n-(S.last.b or 0)>=jit(C.bringDelay) and not isResting() then
             if C.bringAll then
                 local cnt=0
@@ -962,7 +946,6 @@ local function hb()
             S.last.b=n
         end
 
-        -- AUTO CHEST
         if C.autoOpenChest and #d.c>0 and n-(S.last.chest or 0)>=jit(0.5) then
             for _,x in ipairs(d.c) do
                 if x.d<=C.chestRange then
@@ -973,7 +956,6 @@ local function hb()
             S.last.chest=n
         end
 
-        -- AUTO COLLECT
         if C.autoCollect and n-(S.last.pick or 0)>=jit(0.4) then
             for _,x in ipairs(d.i) do
                 if x.d<=C.bringRange then
@@ -986,7 +968,6 @@ local function hb()
             S.last.pick=n
         end
 
-        -- AUTO EAT
         if C.autoEat and n-(S.last.eat or 0)>=jit(2) then
             local hunger=100
             for _,obj in ipairs({hm,chr(),plr}) do
@@ -999,12 +980,10 @@ local function hb()
             S.last.eat=n
         end
 
-        -- AUTO HEAL
         if C.autoHeal and hm.Health<C.healThreshold and n-(S.last.heal or 0)>=jit(2.5) then
             useTool(K.heal) rem(K.heal) S.last.heal=n
         end
 
-        -- AUTO RESCUE
         if C.autoRescue and n-(S.last.resc or 0)>=jit(3.5) then
             for _,x in ipairs(d.r) do
                 if x.d<=200 then
@@ -1020,7 +999,6 @@ local function hb()
             rem(K.rescueAct) S.last.resc=n
         end
 
-        -- AUTO PLANT
         if C.autoPlant and n-(S.last.plant or 0)>=jit(2.5) then
             for i=1,C.plantCount do
                 local a=(i/C.plantCount)*math.pi*2
@@ -1029,13 +1007,10 @@ local function hb()
             end
             S.last.plant=n
         end
-
-        -- AUTO SCRAP / COMPRESS / CRAFT
         if C.autoScrap then rem(K.scrapAct) end
         if C.autoCompress then rem(K.comp) end
         if C.autoCraft then rem(K.craft) end
 
-        -- NEW FEATURES
         autoWallStep()
         autoReviveStep()
         autoDropStep()
@@ -1044,7 +1019,6 @@ local function hb()
         bypassCDStep()
         autoSSStep()
 
-        -- SPEED
         if C.wsEnabled then
             local target=C.stealth and math.min(C.walkspeed,50) or C.walkspeed
             if math.abs(hm.WalkSpeed-target)>0.5 then rampSpeed(target) end
@@ -1054,7 +1028,6 @@ local function hb()
             if math.abs(hm.JumpPower-target)>0.5 then rampJump(target) end
         end
 
-        -- GOD / STAMINA
         if C.godMode and hm.Health<hm.MaxHealth then pcall(function() hm.Health=hm.MaxHealth end) end
         if C.infStamina then
             pcall(function()
@@ -1069,7 +1042,6 @@ local function hb()
         antiFlingStep()
         espLoop()
 
-        -- LIGHTING
         if C.fullbright then
             LG.Brightness=3 LG.ClockTime=14 LG.Ambient=Color3.fromRGB(200,200,200)
         end
@@ -1079,7 +1051,6 @@ local function hb()
     if not ok then warn("[FT hb]",tostring(err)) end
 end
 
--- ==================== UI ====================
 local function ui()
     local g=Instance.new("ScreenGui")
     g.Name="FT_"..tick() g.ResetOnSpawn=false g.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
@@ -1097,7 +1068,7 @@ local function ui()
     Instance.new("UICorner",tb).CornerRadius=UDim.new(0,10)
     local tl=Instance.new("TextLabel",tb)
     tl.Size=UDim2.new(1,-40,1,0) tl.Position=UDim2.new(0,12,0,0)
-    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.5"
+    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.6"
     tl.TextColor3=Color3.fromRGB(200,240,210) tl.Font=Enum.Font.GothamBold tl.TextSize=13
     tl.TextXAlignment=Enum.TextXAlignment.Left
     local cl=Instance.new("TextButton",tb)
@@ -1105,7 +1076,6 @@ local function ui()
     cl.BackgroundTransparency=1 cl.Text="✕" cl.TextColor3=Color3.fromRGB(255,110,110)
     cl.Font=Enum.Font.GothamBold cl.TextSize=16
 
-    -- Mini button (minimize)
     local miniBtn=Instance.new("TextButton",g)
     miniBtn.Size=UDim2.new(0,50,0,50)
     miniBtn.Position=UDim2.new(0,20,0,100)
@@ -1245,7 +1215,7 @@ local function ui()
         l.TextColor3=Color3.fromRGB(120,220,150) l.Font=Enum.Font.GothamBold l.TextSize=11
     end
 
-    -- ========== CAMP TAB (new) ==========
+    -- CAMP
     sec("Camp","🏕️ AUTO CAMP")
     tog("Camp","Auto Camp","autoCamp")
     sld("Camp","Camp Range","campRange",50,300)
@@ -1272,7 +1242,7 @@ local function ui()
     end)
     btn("Camp","Reset Camp Counter",function() S.count.camp=0 print("[FT] Reset") end)
 
-    -- ========== COMBAT ==========
+    -- COMBAT
     sec("Combat","🛡 STEALTH")
     tog("Combat","Stealth Mode","stealth")
     tog("Combat","Spoof Props","spoofProps")
@@ -1299,7 +1269,7 @@ local function ui()
     tog("Combat","Entity Godmode","entityGod")
     tog("Combat","Anti-Fling","antiFling")
 
-    -- ========== ITEMS ==========
+    -- ITEMS
     sec("Items","AUTO FARM")
     tog("Items","Auto Collect","autoCollect")
     tog("Items","  ↳ Flowers","collectFlowers")
@@ -1319,7 +1289,7 @@ local function ui()
     sld("Items","Pickup Range","pickupRange",5,50)
     tog("Items","Bypass Tool Cooldown","bypassCD")
 
-    -- ========== BRING ==========
+    -- BRING
     sec("Bring","SETTINGS")
     tog("Bring","Enable Bring","bringItem")
     sld("Bring","Range","bringRange",10,300)
@@ -1404,7 +1374,7 @@ local function ui()
         end
     end)
 
-    -- ========== SURVIVAL ==========
+    -- SURVIVAL
     sec("Survival","PROTECT")
     tog("Survival","God Mode","godMode")
     tog("Survival","Inf Stamina","infStamina")
@@ -1436,7 +1406,7 @@ local function ui()
     tog("Survival","Gravity Mod","gravityMod",setGravity)
     sld("Survival","Gravity Value","gravityValue",10,300)
 
-    -- ========== TP ==========
+    -- TP
     sec("TP","QUICK")
     btn("TP","→ Nearest Big Tree",function() local d=scan() if #d.big>0 then tp(d.big[1]) end end)
     btn("TP","→ Nearest Tree",function() local d=scan() if #d.t>0 then tp(d.t[1]) end end)
@@ -1466,7 +1436,7 @@ local function ui()
         end
     end)
 
-    -- ========== VISUALS ==========
+    -- VISUALS
     sec("Visuals","ESP ENTITIES")
     tog("Visuals","ESP Enemy","espEnemy")
     tog("Visuals","ESP Player","espPlayer")
@@ -1494,7 +1464,7 @@ local function ui()
     tog("Visuals","Full Bright","fullbright")
     tog("Visuals","No Fog","noFog")
 
-    -- ========== MISC ==========
+    -- MISC
     sec("Misc","UI SETTINGS")
     sld("Misc","Menu Transparency","uiTransparency",0,0.9)
     btn("Misc","Refresh UI Transparency",function()
@@ -1574,7 +1544,6 @@ local function ui()
     return g
 end
 
--- ==================== START ====================
 local gui=ui()
 S.con=R.Heartbeat:Connect(hb)
 
@@ -1606,6 +1575,6 @@ _G.FT={
 }
 
 print("═══════════════════════════════════════════")
-print("🌲 FOREST TOOLKIT v3.5 — Full Edition")
-print("   Tab Camp | Transparency | Mobile OK")
+print("🌲 FOREST TOOLKIT v3.6 — Bring Fixed")
+print("   Prompt parent | Unanchor Model | Keywords+")
 print("═══════════════════════════════════════════")
