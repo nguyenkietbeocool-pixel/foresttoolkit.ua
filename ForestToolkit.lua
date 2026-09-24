@@ -1,4 +1,8 @@
---[[ 🌲 FOREST TOOLKIT v3.4.3 — Complete ]]
+--[[
+    🌲 FOREST TOOLKIT v3.5 — Full Edition
+    Auto Camp | Bring Filter | Transparency | Mobile Optimized
+]]
+
 local P,R,W,RS = game:GetService("Players"),game:GetService("RunService"),
                  game:GetService("Workspace"),game:GetService("ReplicatedStorage")
 local UIS,CG,TS,LG = game:GetService("UserInputService"),game:GetService("CoreGui"),
@@ -7,34 +11,51 @@ local HS = game:GetService("HttpService")
 local TServ = game:GetService("TeleportService")
 local plr = P.LocalPlayer
 local unpack = table.unpack or unpack
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
+-- ==================== CONFIG ====================
 local C = {
-    stealth=true,spoofProps=true,blockRemotes=true,safeTP=true,
+    -- CAMP (new)
+    autoCamp=false,campRange=150,campStand=true,campStandDist=6,campAutoTpFire=false,
+    campFeed=true,campFeedInterval=2,
+    campBringWood=true,campBringFuel=true,campBringScrap=false,
+    campBringFood=false,campBringGem=false,campBringSapling=false,
+    campBringFlower=false,campBringAll=false,
+    -- STEALTH
+    stealth=not isMobile,spoofProps=not isMobile,blockRemotes=not isMobile,safeTP=true,
+    -- COMBAT
     killAura=false,killRange=150,killDelay=0.42,aimAssist=true,
     killMiss=0.08,killBreak=45,
     chopAura=false,chopRange=150,chopDelay=0.36,chopBig=true,
     chopMiss=0.05,chopBreak=60,
     stun=false,stunRange=30,entityGod=false,antiFling=false,
+    -- ITEMS
     bringItem=false,bringRange=120,bringDelay=0.7,bringAll=false,bringFilter="all",
     bringSpeed=35,
     autoFire=false,fireRange=100,fireDelay=2,
-    autoCook=false,autoPlant=false,plantCount=5,autoScrap=false,autoCompress=false,autoCraft=false,
+    autoCook=false,autoPlant=false,plantCount=5,
+    autoScrap=false,autoCompress=false,autoCraft=false,
     autoCollect=false,collectFlowers=true,collectGold=true,
     autoOpenChest=false,chestRange=50,
+    -- SURVIVAL
     godMode=false,infStamina=false,
     autoEat=false,eatThreshold=40,autoHeal=false,healThreshold=40,autoRescue=false,
     fly=false,flySpeed=50,noclip=false,infJump=false,
     wsEnabled=false,walkspeed=50,jpEnabled=false,jumppower=120,antiAFK=false,
     gravityMod=false,gravityValue=100,
+    -- VISUALS
     espEnemy=false,espTree=false,espItem=false,espPlayer=false,espChest=false,
     espGem=false,espLog=false,espScrap=false,espFood=false,espFuel=false,espRescue=false,
-    espTracer=false,espHealth=false,espName=false,
-    espDist=true,espFill=0.6,espSize=13,
+    espName=false,espHealth=false,espDist=true,
+    espFill=0.6,espSize=13,
     fullbright=false,noFog=false,
+    -- MISC
     jitter=true,savedPos={},
     tpDuration=0.3,wsRampTime=0.8,breakRest=1,
-    scanInterval=0.7,espInterval=0.15,flingInterval=0.1,remDedupe=0.15,
-    locations={},
+    scanInterval=isMobile and 1.0 or 0.7,
+    espInterval=isMobile and 0.3 or 0.15,
+    flingInterval=isMobile and 0.2 or 0.1,
+    remDedupe=0.2,
     autoWall=false,wallCount=8,wallRadius=12,wallDelay=3,
     autoRevive=false,reviveRange=20,
     autoDrop=false,dropTarget=nil,dropRange=15,
@@ -43,20 +64,24 @@ local C = {
     crosshair=false,crosshairSize=8,crosshairColor=Color3.fromRGB(0,255,100),
     bypassCD=false,antiAFKPlus=false,
     autoSS=false,ssInterval=60,
+    -- UI
+    uiTransparency=0.3,
 }
 
+-- ==================== STATE ====================
 local S = {
     run=true,con=nil,last={},cache={},hbRunning=false,
     scan={e={},t={},f={},i={},p={},c={},big={},g={},l={},s={},fd={},fu={},r={}},
     lastScan=0,esp={},tracers={},flyBV=nil,flyBG=nil,afk=nil,afkPlus=nil,
-    count={k=0,c=0,f=0,b=0,items=0,chest=0,wall=0,revive=0,drop=0,pickup=0},
-    loadTime=os.clock(),breakUntil=0,breakStart=0,
+    count={k=0,c=0,f=0,b=0,items=0,chest=0,wall=0,revive=0,drop=0,pickup=0,camp=0},
+    breakUntil=0,breakStart=0,
     wsTarget=nil,jpTarget=nil,tpRunning=false,
     spoofWS=16,spoofJP=50,origIndex=nil,origNamecall=nil,
     origGravity=196.2,lastEsp=0,lastFling=0,
     remLast={},scanCount=0,crosshairGui=nil,
 }
 
+-- ==================== HELPERS ====================
 local function jit(x) return C.jitter and x*(1+(math.random()*2-1)*0.25) or x end
 local function chr() return plr.Character end
 local function hrp() local c=chr() return c and c:FindFirstChild("HumanoidRootPart") end
@@ -68,6 +93,7 @@ local function startBreak() S.breakUntil=os.clock()+C.breakRest end
 local function roll(p) return math.random()<p end
 local function countTbl(t) local c=0 for _ in pairs(t) do c=c+1 end return c end
 
+-- ==================== STEALTH+ ====================
 local hasHook = hookmetamethod and checkcaller and newcclosure
 local hasConns = getconnections
 
@@ -133,6 +159,7 @@ local function blockSuspicious()
     end
 end
 
+-- ==================== KEYWORDS ====================
 local K = {
     e={"deer","cult","wolf","bear","enemy","monster","raider","hunter","beast"},
     t={"tree","pine","oak","birch","log"},
@@ -160,13 +187,14 @@ local K = {
     wall={"wall","plank","fence","build","barricade"},
 }
 
+-- ==================== SCAN ====================
 local function scan(f)
     local n=os.clock()
     if not f and n-S.lastScan<C.scanInterval then return S.scan end
     S.lastScan=n
     local h=hrp() if not h then return S.scan end
     local mp=h.Position
-    local maxR=math.max(C.killRange,C.chopRange,C.fireRange,C.bringRange,300)
+    local maxR=math.max(C.killRange,C.chopRange,C.fireRange,C.bringRange,C.campRange,300)
     local o={e={},t={},f={},i={},p={},c={},big={},g={},l={},s={},fd={},fu={},r={}}
     local count=0
     local myChar=chr()
@@ -221,10 +249,12 @@ local function scan(f)
     for _,x in pairs(o) do
         if #x>1 then table.sort(x,function(a,b) return a.d<b.d end) end
     end
-    S.scan=o S.scanCount=count
+    S.scan=o
+    S.scanCount=count
     return o
 end
 
+-- ==================== REMOTE ====================
 local function rem(names,...)
     local key=table.concat(names,"|")
     local n=os.clock()
@@ -253,6 +283,7 @@ local function rem(names,...)
     return hit
 end
 
+-- ==================== PROMPT / ATTACK ====================
 local function prm(o)
     if not o then return false end
     for _,d in ipairs(o:GetDescendants()) do
@@ -276,6 +307,7 @@ local function face(p)
     pcall(function() h.CFrame=CFrame.lookAt(h.Position,h.Position+Vector3.new(d.X,0,d.Z)) end)
 end
 
+-- ==================== BRING ====================
 local function bring(x,h)
     local o=x.p or x.m
     if not o or not o.Parent then return end
@@ -317,6 +349,7 @@ local function tpModel(x,cf)
     elseif obj:IsA("BasePart") then pcall(function() obj.CFrame=cf end) end
 end
 
+-- ==================== SAFE TP ====================
 local function safeTP(cf)
     if S.tpRunning then return end
     local h=hrp() if not h then return end
@@ -352,6 +385,7 @@ local function tp(t)
     safeTP(target)
 end
 
+-- ==================== RAMP ====================
 local function rampSpeed(target)
     local h=hum() if not h then return end
     if S.wsTarget==target then return end
@@ -388,6 +422,7 @@ local function rampJump(target)
     end)
 end
 
+-- ==================== ESP ====================
 local function clearESP()
     for _,g in pairs(S.esp) do
         if g.box then pcall(function() g.box:Destroy() end) end
@@ -464,6 +499,7 @@ local function espLoop()
     end
 end
 
+-- ==================== FLY / NOCLIP ====================
 local function setFly(v)
     local h=hrp() if not h then return end
     if v then
@@ -505,6 +541,7 @@ local function noclipStep()
     end
 end
 
+-- ==================== ANTI-FLING ====================
 local function antiFlingStep()
     if not C.antiFling then return end
     local n=os.clock()
@@ -529,11 +566,13 @@ local function antiFlingStep()
     end
 end
 
+-- ==================== GRAVITY ====================
 local function setGravity(v)
     if v then S.origGravity=W.Gravity W.Gravity=C.gravityValue
     else W.Gravity=S.origGravity end
 end
 
+-- ==================== ANTI-AFK ====================
 local function setAFK(v)
     local VU=game:GetService("VirtualUser")
     if v and not S.afk then
@@ -566,6 +605,86 @@ local function setAFKPlus(v)
     end
 end
 
+-- ==================== AUTO CAMP ====================
+local function autoCampStep()
+    if not C.autoCamp then return end
+    local n=os.clock()
+    if n-(S.last.camp or 0)<0.5 then return end
+    S.last.camp=n
+
+    local h=hrp() if not h then return end
+    local d=scan()
+
+    -- 1. Tìm campfire gần nhất
+    local fire = d.f[1]
+    if not fire then return end
+    local fireR = fire.r
+    if not fireR or not fireR.Parent then return end
+
+    -- 2. Đứng gần lửa
+    if C.campStand then
+        local firePos = fireR.Position
+        local dist = (h.Position - firePos).Magnitude
+        if dist > C.campStandDist + 4 and C.campAutoTpFire then
+            local dir = (h.Position - firePos)
+            if dir.Magnitude > 0.1 then
+                dir = dir.Unit
+                local target = firePos + dir * C.campStandDist
+                target = Vector3.new(target.X, h.Position.Y, target.Z)
+                safeTP(CFrame.new(target))
+            end
+        end
+    end
+
+    -- 3. Thu thập danh sách item cần bring
+    local bringList = {}
+    if C.campBringAll then
+        for _,x in ipairs(d.i) do table.insert(bringList, x) end
+        for _,x in ipairs(d.l) do table.insert(bringList, x) end
+        for _,x in ipairs(d.g) do table.insert(bringList, x) end
+        for _,x in ipairs(d.s) do table.insert(bringList, x) end
+        for _,x in ipairs(d.fd) do table.insert(bringList, x) end
+        for _,x in ipairs(d.fu) do table.insert(bringList, x) end
+    else
+        if C.campBringWood then for _,x in ipairs(d.l) do table.insert(bringList, x) end end
+        if C.campBringFuel then for _,x in ipairs(d.fu) do table.insert(bringList, x) end end
+        if C.campBringScrap then for _,x in ipairs(d.s) do table.insert(bringList, x) end end
+        if C.campBringFood then for _,x in ipairs(d.fd) do table.insert(bringList, x) end end
+        if C.campBringGem then for _,x in ipairs(d.g) do table.insert(bringList, x) end end
+        if C.campBringFlower then
+            for _,x in ipairs(d.i) do
+                if has(x.p.Name:lower(),K.flower) then table.insert(bringList,x) end
+            end
+        end
+        if C.campBringSapling then
+            for _,x in ipairs(d.i) do
+                if x.p.Name:lower():find("sapling") then table.insert(bringList,x) end
+            end
+        end
+    end
+
+    -- 4. Bring (tối đa 10 mỗi lần)
+    local cnt = 0
+    for _,x in ipairs(bringList) do
+        if x.d and x.d <= C.campRange then
+            bring(x, h)
+            cnt = cnt + 1
+            if cnt >= 10 then break end
+        end
+    end
+    if cnt > 0 then S.count.camp = S.count.camp + cnt end
+
+    -- 5. Cho fuel vào lửa
+    if C.campFeed and n-(S.last.feed or 0) >= C.campFeedInterval then
+        S.last.feed = n
+        if not prm(fire.m) then
+            rem(K.fuelAdd, fire.m)
+        end
+        S.count.f = S.count.f + 1
+    end
+end
+
+-- ==================== OTHER AUTOMATION ====================
 local function autoWallStep()
     if not C.autoWall then return end
     local n=os.clock()
@@ -726,6 +845,7 @@ local function autoSSStep()
     end)
 end
 
+-- ==================== CHARACTER EVENTS ====================
 UIS.JumpRequest:Connect(function()
     if C.infJump then local h=hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end
 end)
@@ -739,6 +859,7 @@ plr.CharacterAdded:Connect(function()
     if C.scaleEnabled then setScale(C.scaleValue) end
 end)
 
+-- ==================== MAIN LOOP ====================
 local function hb()
     if not S.run or S.hbRunning then return end
     S.hbRunning=true
@@ -750,6 +871,10 @@ local function hb()
         end
         local d=scan()
 
+        -- AUTO CAMP
+        autoCampStep()
+
+        -- KILL AURA
         if C.killAura and #d.e>0 and n-(S.last.k or 0)>=jit(C.killDelay) and not isResting() then
             local t=d.e[1]
             if t.d<=C.killRange then
@@ -770,6 +895,7 @@ local function hb()
             end
         end
 
+        -- CHOP AURA
         if C.chopAura and n-(S.last.c or 0)>=jit(C.chopDelay) and not isResting() then
             local t=(C.chopBig and #d.big>0) and d.big[1] or (#d.t>0 and d.t[1] or nil)
             if t and t.d<=C.chopRange then
@@ -785,11 +911,13 @@ local function hb()
             end
         end
 
+        -- STUN
         if C.stun and #d.e>0 and n-(S.last.st or 0)>=jit(1.2) then
             local t=d.e[1]
             if t.d<=C.stunRange then face(t.r.Position) atk() S.last.st=n end
         end
 
+        -- ENTITY GOD
         if C.entityGod then
             for _,x in ipairs(d.e) do
                 local hh=x.m:FindFirstChildOfClass("Humanoid")
@@ -797,6 +925,7 @@ local function hb()
             end
         end
 
+        -- AUTO FIRE
         if C.autoFire and #d.f>0 and n-(S.last.f or 0)>=jit(C.fireDelay) then
             local t=d.f[1]
             if t.d<=C.fireRange then
@@ -805,6 +934,7 @@ local function hb()
             end
         end
 
+        -- AUTO COOK
         if C.autoCook and #d.f>0 and n-(S.last.cook or 0)>=jit(2.5) then
             for _,f in ipairs(d.f) do
                 if f.d<=30 then useTool(K.eat) break end
@@ -812,6 +942,7 @@ local function hb()
             S.last.cook=n
         end
 
+        -- BRING
         if C.bringItem and #d.i>0 and n-(S.last.b or 0)>=jit(C.bringDelay) and not isResting() then
             if C.bringAll then
                 local cnt=0
@@ -831,6 +962,7 @@ local function hb()
             S.last.b=n
         end
 
+        -- AUTO CHEST
         if C.autoOpenChest and #d.c>0 and n-(S.last.chest or 0)>=jit(0.5) then
             for _,x in ipairs(d.c) do
                 if x.d<=C.chestRange then
@@ -841,6 +973,7 @@ local function hb()
             S.last.chest=n
         end
 
+        -- AUTO COLLECT
         if C.autoCollect and n-(S.last.pick or 0)>=jit(0.4) then
             for _,x in ipairs(d.i) do
                 if x.d<=C.bringRange then
@@ -853,6 +986,7 @@ local function hb()
             S.last.pick=n
         end
 
+        -- AUTO EAT
         if C.autoEat and n-(S.last.eat or 0)>=jit(2) then
             local hunger=100
             for _,obj in ipairs({hm,chr(),plr}) do
@@ -865,10 +999,12 @@ local function hb()
             S.last.eat=n
         end
 
+        -- AUTO HEAL
         if C.autoHeal and hm.Health<C.healThreshold and n-(S.last.heal or 0)>=jit(2.5) then
             useTool(K.heal) rem(K.heal) S.last.heal=n
         end
 
+        -- AUTO RESCUE
         if C.autoRescue and n-(S.last.resc or 0)>=jit(3.5) then
             for _,x in ipairs(d.r) do
                 if x.d<=200 then
@@ -884,6 +1020,7 @@ local function hb()
             rem(K.rescueAct) S.last.resc=n
         end
 
+        -- AUTO PLANT
         if C.autoPlant and n-(S.last.plant or 0)>=jit(2.5) then
             for i=1,C.plantCount do
                 local a=(i/C.plantCount)*math.pi*2
@@ -892,13 +1029,22 @@ local function hb()
             end
             S.last.plant=n
         end
+
+        -- AUTO SCRAP / COMPRESS / CRAFT
         if C.autoScrap then rem(K.scrapAct) end
         if C.autoCompress then rem(K.comp) end
         if C.autoCraft then rem(K.craft) end
 
-        autoWallStep() autoReviveStep() autoDropStep() autoPickupStep()
-        scaleStep() bypassCDStep() autoSSStep()
+        -- NEW FEATURES
+        autoWallStep()
+        autoReviveStep()
+        autoDropStep()
+        autoPickupStep()
+        scaleStep()
+        bypassCDStep()
+        autoSSStep()
 
+        -- SPEED
         if C.wsEnabled then
             local target=C.stealth and math.min(C.walkspeed,50) or C.walkspeed
             if math.abs(hm.WalkSpeed-target)>0.5 then rampSpeed(target) end
@@ -908,6 +1054,7 @@ local function hb()
             if math.abs(hm.JumpPower-target)>0.5 then rampJump(target) end
         end
 
+        -- GOD / STAMINA
         if C.godMode and hm.Health<hm.MaxHealth then pcall(function() hm.Health=hm.MaxHealth end) end
         if C.infStamina then
             pcall(function()
@@ -916,8 +1063,13 @@ local function hb()
                 end
             end)
         end
-        flyStep() noclipStep() antiFlingStep() espLoop()
 
+        flyStep()
+        noclipStep()
+        antiFlingStep()
+        espLoop()
+
+        -- LIGHTING
         if C.fullbright then
             LG.Brightness=3 LG.ClockTime=14 LG.Ambient=Color3.fromRGB(200,200,200)
         end
@@ -927,6 +1079,7 @@ local function hb()
     if not ok then warn("[FT hb]",tostring(err)) end
 end
 
+-- ==================== UI ====================
 local function ui()
     local g=Instance.new("ScreenGui")
     g.Name="FT_"..tick() g.ResetOnSpawn=false g.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
@@ -935,35 +1088,64 @@ local function ui()
     local m=Instance.new("Frame",g)
     m.Size=UDim2.new(0,640,0,440) m.Position=UDim2.new(.5,-320,.5,-220)
     m.BackgroundColor3=Color3.fromRGB(22,24,30) m.BorderSizePixel=0 m.Active=true m.Draggable=true
+    m.BackgroundTransparency=C.uiTransparency
     Instance.new("UICorner",m).CornerRadius=UDim.new(0,10)
 
     local tb=Instance.new("Frame",m)
     tb.Size=UDim2.new(1,0,0,32) tb.BackgroundColor3=Color3.fromRGB(32,34,42) tb.BorderSizePixel=0
+    tb.BackgroundTransparency=C.uiTransparency
     Instance.new("UICorner",tb).CornerRadius=UDim.new(0,10)
     local tl=Instance.new("TextLabel",tb)
     tl.Size=UDim2.new(1,-40,1,0) tl.Position=UDim2.new(0,12,0,0)
-    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.4.3"
+    tl.BackgroundTransparency=1 tl.Text="🌲 FOREST TOOLKIT v3.5"
     tl.TextColor3=Color3.fromRGB(200,240,210) tl.Font=Enum.Font.GothamBold tl.TextSize=13
     tl.TextXAlignment=Enum.TextXAlignment.Left
     local cl=Instance.new("TextButton",tb)
     cl.Size=UDim2.new(0,32,0,32) cl.Position=UDim2.new(1,-32,0,0)
     cl.BackgroundTransparency=1 cl.Text="✕" cl.TextColor3=Color3.fromRGB(255,110,110)
     cl.Font=Enum.Font.GothamBold cl.TextSize=16
-    cl.MouseButton1Click:Connect(function() g:Destroy() end)
 
-    local tabs={"Combat","Items","Bring","Survival","TP","Visuals","Misc"}
+    -- Mini button (minimize)
+    local miniBtn=Instance.new("TextButton",g)
+    miniBtn.Size=UDim2.new(0,50,0,50)
+    miniBtn.Position=UDim2.new(0,20,0,100)
+    miniBtn.BackgroundColor3=Color3.fromRGB(220,60,60)
+    miniBtn.BackgroundTransparency=C.uiTransparency
+    miniBtn.Text="🌲"
+    miniBtn.TextColor3=Color3.fromRGB(255,255,255)
+    miniBtn.Font=Enum.Font.GothamBold
+    miniBtn.TextSize=20
+    miniBtn.BorderSizePixel=0
+    miniBtn.Visible=false
+    miniBtn.Active=true
+    miniBtn.Draggable=true
+    Instance.new("UICorner",miniBtn).CornerRadius=UDim.new(1,0)
+
+    cl.MouseButton1Click:Connect(function()
+        m.Visible=false
+        miniBtn.Visible=true
+    end)
+    miniBtn.MouseButton1Click:Connect(function()
+        m.Visible=true
+        miniBtn.Visible=false
+    end)
+
+    local tabs={"Camp","Combat","Items","Bring","Survival","TP","Visuals","Misc"}
     local tbar=Instance.new("Frame",m)
     tbar.Size=UDim2.new(0,110,1,-32) tbar.Position=UDim2.new(0,0,0,32)
     tbar.BackgroundColor3=Color3.fromRGB(28,30,38) tbar.BorderSizePixel=0
+    tbar.BackgroundTransparency=C.uiTransparency
     local ct=Instance.new("Frame",m)
     ct.Size=UDim2.new(1,-110,1,-32) ct.Position=UDim2.new(0,110,0,32)
     ct.BackgroundColor3=Color3.fromRGB(22,24,30) ct.BorderSizePixel=0
+    ct.BackgroundTransparency=C.uiTransparency
 
     local pages={}
     for i,nm in ipairs(tabs) do
         local b=Instance.new("TextButton",tbar)
-        b.Size=UDim2.new(1,0,0,30) b.Position=UDim2.new(0,0,0,(i-1)*30)
-        b.BackgroundColor3=Color3.fromRGB(28,30,38) b.BorderSizePixel=0
+        b.Size=UDim2.new(1,0,0,28) b.Position=UDim2.new(0,0,0,(i-1)*28)
+        b.BackgroundColor3=Color3.fromRGB(28,30,38) b.BackgroundTransparency=C.uiTransparency
+        b.BorderSizePixel=0
         b.Text="  "..nm b.TextColor3=Color3.fromRGB(180,180,190)
         b.Font=Enum.Font.Gotham b.TextSize=12 b.TextXAlignment=Enum.TextXAlignment.Left
         local p=Instance.new("ScrollingFrame",ct)
@@ -997,6 +1179,7 @@ local function ui()
         local b=Instance.new("TextButton",r)
         b.Size=UDim2.new(0,42,0,19) b.Position=UDim2.new(1,-42,.5,-9.5)
         b.BackgroundColor3=C[key] and Color3.fromRGB(90,200,120) or Color3.fromRGB(55,58,70)
+        b.BackgroundTransparency=C.uiTransparency
         b.Text=C[key] and "ON" or "OFF" b.TextColor3=Color3.fromRGB(255,255,255)
         b.Font=Enum.Font.GothamBold b.TextSize=10 b.BorderSizePixel=0
         Instance.new("UICorner",b).CornerRadius=UDim.new(0,4)
@@ -1018,7 +1201,8 @@ local function ui()
         l.Font=Enum.Font.Gotham l.TextSize=11 l.TextXAlignment=Enum.TextXAlignment.Left
         local br=Instance.new("Frame",r)
         br.Size=UDim2.new(1,0,0,6) br.Position=UDim2.new(0,0,0,26)
-        br.BackgroundColor3=Color3.fromRGB(50,52,62) br.BorderSizePixel=0
+        br.BackgroundColor3=Color3.fromRGB(50,52,62) br.BackgroundTransparency=C.uiTransparency
+        br.BorderSizePixel=0
         Instance.new("UICorner",br).CornerRadius=UDim.new(0,3)
         local f=Instance.new("Frame",br)
         f.Size=UDim2.new((C[key]-mn)/(mx-mn),0,1,0)
@@ -1045,7 +1229,9 @@ local function ui()
     local function btn(pg,lb,cb)
         local b=Instance.new("TextButton",pages[pg])
         b.Size=UDim2.new(1,-16,0,28) b.Position=UDim2.new(0,8,0,nextY(pg,30))
-        b.BackgroundColor3=Color3.fromRGB(42,44,56) b.Text=lb
+        b.BackgroundColor3=Color3.fromRGB(42,44,56)
+        b.BackgroundTransparency=C.uiTransparency
+        b.Text=lb
         b.TextColor3=Color3.fromRGB(220,220,230) b.Font=Enum.Font.Gotham
         b.TextSize=12 b.BorderSizePixel=0
         Instance.new("UICorner",b).CornerRadius=UDim.new(0,4)
@@ -1059,6 +1245,34 @@ local function ui()
         l.TextColor3=Color3.fromRGB(120,220,150) l.Font=Enum.Font.GothamBold l.TextSize=11
     end
 
+    -- ========== CAMP TAB (new) ==========
+    sec("Camp","🏕️ AUTO CAMP")
+    tog("Camp","Auto Camp","autoCamp")
+    sld("Camp","Camp Range","campRange",50,300)
+    tog("Camp","Auto Stand Near Fire","campStand")
+    sld("Camp","Stand Distance","campStandDist",3,20)
+    tog("Camp","Auto TP to Fire","campAutoTpFire")
+    sec("Camp","🔥 FEED FIRE")
+    tog("Camp","Auto Feed Fire","campFeed")
+    sld("Camp","Feed Interval","campFeedInterval",0.5,10)
+    sec("Camp","📦 BRING TO CAMP")
+    tog("Camp","Bring Wood","campBringWood")
+    tog("Camp","Bring Fuel","campBringFuel")
+    tog("Camp","Bring Scrap","campBringScrap")
+    tog("Camp","Bring Food","campBringFood")
+    tog("Camp","Bring Gem","campBringGem")
+    tog("Camp","Bring Sapling","campBringSapling")
+    tog("Camp","Bring Flower","campBringFlower")
+    tog("Camp","Bring ALL Items","campBringAll")
+    sec("Camp","QUICK ACTIONS")
+    btn("Camp","Dump Camp Scan",function()
+        local d=scan(true)
+        print(("Fire:%d Log:%d Fuel:%d Scrap:%d Food:%d Gem:%d Item:%d")
+            :format(#d.f,#d.l,#d.fu,#d.s,#d.fd,#d.g,#d.i))
+    end)
+    btn("Camp","Reset Camp Counter",function() S.count.camp=0 print("[FT] Reset") end)
+
+    -- ========== COMBAT ==========
     sec("Combat","🛡 STEALTH")
     tog("Combat","Stealth Mode","stealth")
     tog("Combat","Spoof Props","spoofProps")
@@ -1085,6 +1299,7 @@ local function ui()
     tog("Combat","Entity Godmode","entityGod")
     tog("Combat","Anti-Fling","antiFling")
 
+    -- ========== ITEMS ==========
     sec("Items","AUTO FARM")
     tog("Items","Auto Collect","autoCollect")
     tog("Items","  ↳ Flowers","collectFlowers")
@@ -1104,6 +1319,7 @@ local function ui()
     sld("Items","Pickup Range","pickupRange",5,50)
     tog("Items","Bypass Tool Cooldown","bypassCD")
 
+    -- ========== BRING ==========
     sec("Bring","SETTINGS")
     tog("Bring","Enable Bring","bringItem")
     sld("Bring","Range","bringRange",10,300)
@@ -1188,6 +1404,7 @@ local function ui()
         end
     end)
 
+    -- ========== SURVIVAL ==========
     sec("Survival","PROTECT")
     tog("Survival","God Mode","godMode")
     tog("Survival","Inf Stamina","infStamina")
@@ -1219,6 +1436,7 @@ local function ui()
     tog("Survival","Gravity Mod","gravityMod",setGravity)
     sld("Survival","Gravity Value","gravityValue",10,300)
 
+    -- ========== TP ==========
     sec("TP","QUICK")
     btn("TP","→ Nearest Big Tree",function() local d=scan() if #d.big>0 then tp(d.big[1]) end end)
     btn("TP","→ Nearest Tree",function() local d=scan() if #d.t>0 then tp(d.t[1]) end end)
@@ -1230,6 +1448,7 @@ local function ui()
     btn("TP","→ Nearest Rescue",function() local d=scan() if #d.r>0 then
         local x=d.r[1] if x.m then tp(x.m) else tp(x.p.Position) end
     end end)
+    btn("TP","→ Nearest Campfire",function() local d=scan() if #d.f>0 then tp(d.f[1]) end end)
     sec("TP","SAVED POSITIONS")
     btn("TP","Save Current Position",function()
         local h=hrp() if not h then return end
@@ -1247,6 +1466,7 @@ local function ui()
         end
     end)
 
+    -- ========== VISUALS ==========
     sec("Visuals","ESP ENTITIES")
     tog("Visuals","ESP Enemy","espEnemy")
     tog("Visuals","ESP Player","espPlayer")
@@ -1274,6 +1494,24 @@ local function ui()
     tog("Visuals","Full Bright","fullbright")
     tog("Visuals","No Fog","noFog")
 
+    -- ========== MISC ==========
+    sec("Misc","UI SETTINGS")
+    sld("Misc","Menu Transparency","uiTransparency",0,0.9)
+    btn("Misc","Refresh UI Transparency",function()
+        m.BackgroundTransparency=C.uiTransparency
+        tb.BackgroundTransparency=C.uiTransparency
+        tbar.BackgroundTransparency=C.uiTransparency
+        ct.BackgroundTransparency=C.uiTransparency
+        miniBtn.BackgroundTransparency=C.uiTransparency
+    end)
+    sec("Misc","QUICK CLEAN")
+    btn("Misc","Tắt hết ESP (fix lag)",function()
+        C.espEnemy=false C.espTree=false C.espItem=false C.espPlayer=false
+        C.espChest=false C.espGem=false C.espLog=false C.espScrap=false
+        C.espFood=false C.espFuel=false C.espRescue=false
+        clearESP()
+        print("[FT] Đã tắt hết ESP")
+    end)
     sec("Misc","CHARACTER")
     btn("Misc","Reset Character",function()
         local h=hum() if h then h.Health=0 end
@@ -1327,15 +1565,16 @@ local function ui()
         end
     end)
     btn("Misc","Show Stats",function()
-        print(("K:%d C:%d F:%d B:%d Items:%d Chests:%d Wall:%d Revive:%d Drop:%d Pickup:%d"):format(
+        print(("K:%d C:%d F:%d B:%d Items:%d Chests:%d Wall:%d Revive:%d Drop:%d Pickup:%d Camp:%d"):format(
             S.count.k,S.count.c,S.count.f,S.count.b,S.count.items,S.count.chest,
-            S.count.wall,S.count.revive,S.count.drop,S.count.pickup))
+            S.count.wall,S.count.revive,S.count.drop,S.count.pickup,S.count.camp))
     end)
     btn("Misc","Reset Stats",function() for k in pairs(S.count) do S.count[k]=0 end end)
 
     return g
 end
 
+-- ==================== START ====================
 local gui=ui()
 S.con=R.Heartbeat:Connect(hb)
 
@@ -1344,6 +1583,8 @@ if C.stealth then
         pcall(enableSpoof)
         pcall(blockSuspicious)
     end)
+elseif isMobile then
+    print("[FT] Mobile detected - Stealth OFF để tránh lag")
 end
 
 _G.FT={
@@ -1365,6 +1606,6 @@ _G.FT={
 }
 
 print("═══════════════════════════════════════════")
-print("🌲 FOREST TOOLKIT v3.4.3 — Loaded")
-print("   UI ready | Stealth sau 3s | No lag")
+print("🌲 FOREST TOOLKIT v3.5 — Full Edition")
+print("   Tab Camp | Transparency | Mobile OK")
 print("═══════════════════════════════════════════")
